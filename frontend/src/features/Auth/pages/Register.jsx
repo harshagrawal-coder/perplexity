@@ -95,6 +95,7 @@ const Register = () => {
           value={formData.username}
           onChange={handleChange}
           error={errors.username}
+          autoComplete="username"
         />
 
         <AuthInput
@@ -105,6 +106,7 @@ const Register = () => {
           value={formData.email}
           onChange={handleChange}
           error={errors.email}
+          autoComplete="email"
         />
 
         <AuthInput
@@ -115,6 +117,7 @@ const Register = () => {
           value={formData.password}
           onChange={handleChange}
           error={errors.password}
+          autoComplete="new-password"
         />
 
         <label className="auth-checkbox">

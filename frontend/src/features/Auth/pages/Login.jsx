@@ -86,6 +86,7 @@ const Login = () => {
           value={formData.email}
           onChange={handleChange}
           error={errors.email}
+          autoComplete="email"
         />
 
         <AuthInput
@@ -96,6 +97,7 @@ const Login = () => {
           value={formData.password}
           onChange={handleChange}
           error={errors.password}
+          autoComplete="current-password"
         />
 
         <div className="auth-form__meta">

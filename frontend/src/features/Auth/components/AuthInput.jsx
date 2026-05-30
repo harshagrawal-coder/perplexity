@@ -1,4 +1,13 @@
-function AuthInput({ label, type = "text", placeholder, name, value, onChange, error }) {
+function AuthInput({
+  label,
+  type = "text",
+  placeholder,
+  name,
+  value,
+  onChange,
+  error,
+  autoComplete,
+}) {
   return (
     <label className="auth-field">
       <span>{label}</span>
@@ -8,6 +17,7 @@ function AuthInput({ label, type = "text", placeholder, name, value, onChange, e
         name={name}
         value={value}
         onChange={onChange}
+        autoComplete={autoComplete}
       />
       {error && <span className="auth-field__error">{error}</span>}
     </label>
