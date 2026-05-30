@@ -9,13 +9,13 @@ import { generalLimiter } from "./middleware/rateLimiter.js";
 const app = express();
 
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || "https://perplexity-silk.vercel.app/",
+  origin:"https://perplexity-silk.vercel.app",
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
 };
 
 app.use(helmet());
-app.use(cors(corsOptions));
+app.use(cors());
 
 app.use(cookieParser());
 app.use(express.json());
