@@ -22,7 +22,7 @@ function getCookieMaxAge(expiresIn = "7d") {
 }
 
 function getVerificationUrl(token) {
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const frontendUrl = process.env.FRONTEND_URL || "https://perplexity-silk.vercel.app";
   const normalizedFrontendUrl = frontendUrl.replace(/\/+$/, "");
 
   return `${normalizedFrontendUrl}/verify-email?token=${token}`;
@@ -152,7 +152,22 @@ export async function resendVerificationEmail(req, res) {
       });
     }
 
-    const token = user.generateAuthToken();
+    let token;
+
+    try {
+      token = user.generateAuthToken();
+    } catch (error) {
+      console.error("Verification token generation failed:", error);
+
+      return res.status(500).json({
+        message:
+          process.env.NODE_ENV === "production"
+            ? "Unable to generate verification email right now. Please try again later."
+            : error.message,
+        success: false,
+      });
+    }
+
     await sendMail(buildVerificationEmail(user, token));
 
     return res.status(200).json({
@@ -160,10 +175,13 @@ export async function resendVerificationEmail(req, res) {
       success: true,
     });
   } catch (error) {
-    console.error("Resend verification email error:", error.message);
+    console.error("Resend verification email error:", error);
 
     return res.status(500).json({
-      message: "Unable to send verification email right now. Please try again later.",
+      message:
+        process.env.NODE_ENV === "production"
+          ? "Unable to send verification email right now. Please try again later."
+          : error.message,
       success: false,
     });
   }

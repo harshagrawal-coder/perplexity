@@ -10,9 +10,9 @@ const httpServer = http.createServer(app);
 async function startServer() {
   try {
     await connectToDB();
-
-    if (process.env.NODE_ENV !== "production") {
-      await verifyMailTransporter();
+    const mailReady = await verifyMailTransporter();
+    if (!mailReady) {
+      console.warn("Mail transporter is not ready. Verification emails may fail.");
     }
 
     initSocket(httpServer);

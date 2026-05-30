@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import "./Login.scss";
 import AuthLayout from "../components/AuthLayout";
 import AuthInput from "../components/AuthInput";
 import { useNavigate, Navigate, useLocation } from "react-router-dom";
 import { authService } from "../services/auth.services";
+import { clearError } from "../auth.slice";
 const loginFeatures = [
   "Continue work with a distraction-free dashboard built for speed.",
   "Keep conversations, prompts, and saved findings in one flowing workspace.",
@@ -13,6 +14,7 @@ const loginFeatures = [
 ];
 
 const Login = () => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
@@ -25,10 +27,17 @@ const Login = () => {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMessage, setResendMessage] = useState("");
   const [resendError, setResendError] = useState("");
+  const [showVerificationSpotlight, setShowVerificationSpotlight] = useState(
+    Boolean(location.state?.registrationMessage || location.state?.verificationEmailSent === false),
+  );
 
   if (user) {
     return <Navigate to="/" replace />;
   }
+
+  useEffect(() => {
+    dispatch(clearError());
+  }, [dispatch]);
 
   useEffect(() => {
     if (location.state?.email) {
@@ -40,6 +49,7 @@ const Login = () => {
 
     if (location.state?.registrationMessage) {
       setVerificationMessage(location.state.registrationMessage);
+      setShowVerificationSpotlight(true);
     }
   }, [location.state]);
 
@@ -49,6 +59,9 @@ const Login = () => {
     setErrors((prev) => ({ ...prev, [name]: "" }));
     setResendError("");
     setResendMessage("");
+    if (error) {
+      dispatch(clearError());
+    }
   };
 
   const validate = () => {
@@ -84,6 +97,7 @@ const Login = () => {
       const response = await authService.resendVerificationEmail(formData.email);
       setResendMessage(response.message);
       setVerificationMessage("");
+      setShowVerificationSpotlight(true);
     } catch (resendError) {
       setResendError(resendError.message || "Unable to resend verification email");
     } finally {
@@ -94,6 +108,21 @@ const Login = () => {
   const shouldShowResendAction =
     error?.toLowerCase().includes("not verified") ||
     location.state?.verificationEmailSent === false;
+  const emailLabel = formData.email || location.state?.email || "Add your email to continue";
+  const verificationTone = resendMessage
+    ? "sent"
+    : shouldShowResendAction
+      ? "attention"
+      : "info";
+  const verificationTitle = resendMessage
+    ? "Verification email on the way"
+    : shouldShowResendAction
+      ? "Finish setting up your account"
+      : "Check your inbox";
+  const verificationCopy =
+    resendMessage ||
+    verificationMessage ||
+    "We created your account, but your verification email still needs to be sent. Use the action below and we will try again right away.";
 
   if (!initialized) {
     return (
@@ -123,14 +152,52 @@ const Login = () => {
       ]}
     >
       <form className="auth-form" onSubmit={handleSubmit}>
-        {verificationMessage && (
-          <div className="auth-form__api-success">{verificationMessage}</div>
+        {showVerificationSpotlight && (
+          <section
+            className={`verification-spotlight verification-spotlight--${verificationTone}`}
+          >
+            <div className="verification-spotlight__pulse" />
+            <div className="verification-spotlight__header">
+              <div>
+                <span className="verification-spotlight__eyebrow">
+                  {resendMessage ? "Email sent" : "Verification checkpoint"}
+                </span>
+                <h3>{verificationTitle}</h3>
+              </div>
+              <button
+                className="verification-spotlight__dismiss"
+                type="button"
+                onClick={() => setShowVerificationSpotlight(false)}
+                aria-label="Dismiss verification message"
+              >
+                x
+              </button>
+            </div>
+
+            <p className="verification-spotlight__message">{verificationCopy}</p>
+
+            <div className="verification-spotlight__email">
+              <span>Email Address</span>
+              <strong>{emailLabel}</strong>
+            </div>
+
+            <div className="verification-spotlight__actions">
+              <button
+                className="auth-button auth-button--ghost verification-spotlight__button"
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resendLoading}
+              >
+                {resendLoading ? "Sending verification..." : "Resend verification email"}
+              </button>
+              <p className="verification-spotlight__hint">
+                Once verified, return here and sign in normally.
+              </p>
+            </div>
+          </section>
         )}
         {error && <div className="auth-form__api-error">{error}</div>}
         {resendError && <div className="auth-form__api-error">{resendError}</div>}
-        {resendMessage && (
-          <div className="auth-form__api-success">{resendMessage}</div>
-        )}
         <AuthInput
           label="Email Address"
           type="email"
@@ -160,7 +227,7 @@ const Login = () => {
           </label>
         </div>
 
-        {shouldShowResendAction && (
+        {shouldShowResendAction && !showVerificationSpotlight && (
           <button
             className="auth-button auth-button--ghost"
             type="button"

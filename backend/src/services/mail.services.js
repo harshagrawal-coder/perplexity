@@ -23,7 +23,10 @@ function createAppPasswordTransporter() {
   }
 
   return nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    family: 4,
     auth: {
       user: gmailUser,
       pass: process.env.GOOGLE_APP_PASSWORD,
@@ -46,7 +49,10 @@ async function createOAuthTransporter() {
     typeof accessToken === "string" ? accessToken : accessToken?.token;
 
   return nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    family: 4,
     auth: {
       type: "OAuth2",
       user: gmailUser,
