@@ -35,6 +35,8 @@ function createAppPasswordTransporter() {
 }
 
 async function createOAuthTransporter() {
+  console.log("Using OAuth transporter");
+  console.log("Refresh token exists:", !!process.env.GOOGLE_REFRESH_TOKEN);
   if (
     !gmailUser ||
     !process.env.GOOGLE_CLIENT_ID ||
