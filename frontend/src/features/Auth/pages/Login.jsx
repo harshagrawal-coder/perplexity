@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useSelector } from "react-redux";
 import "./Login.scss";
 import AuthLayout from "../components/AuthLayout";
 import AuthInput from "../components/AuthInput";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate, Navigate, useLocation } from "react-router-dom";
+import { authService } from "../services/auth.services";
 const loginFeatures = [
   "Continue work with a distraction-free dashboard built for speed.",
   "Keep conversations, prompts, and saved findings in one flowing workspace.",
@@ -13,19 +14,41 @@ const loginFeatures = [
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const { loading, error, initialized, user } = useSelector((state) => state.auth);
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
+  const [verificationMessage, setVerificationMessage] = useState(
+    location.state?.registrationMessage || "",
+  );
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState("");
+  const [resendError, setResendError] = useState("");
 
   if (user) {
     return <Navigate to="/" replace />;
   }
 
+  useEffect(() => {
+    if (location.state?.email) {
+      setFormData((prev) => ({
+        ...prev,
+        email: prev.email || location.state.email,
+      }));
+    }
+
+    if (location.state?.registrationMessage) {
+      setVerificationMessage(location.state.registrationMessage);
+    }
+  }, [location.state]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
+    setResendError("");
+    setResendMessage("");
   };
 
   const validate = () => {
@@ -48,6 +71,29 @@ const Login = () => {
       // error handled by redux
     }
   };
+
+  const handleResendVerification = async () => {
+    if (!formData.email) {
+      setErrors((prev) => ({ ...prev, email: "Email is required to resend verification" }));
+      return;
+    }
+
+    try {
+      setResendLoading(true);
+      setResendError("");
+      const response = await authService.resendVerificationEmail(formData.email);
+      setResendMessage(response.message);
+      setVerificationMessage("");
+    } catch (resendError) {
+      setResendError(resendError.message || "Unable to resend verification email");
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const shouldShowResendAction =
+    error?.toLowerCase().includes("not verified") ||
+    location.state?.verificationEmailSent === false;
 
   if (!initialized) {
     return (
@@ -77,7 +123,14 @@ const Login = () => {
       ]}
     >
       <form className="auth-form" onSubmit={handleSubmit}>
+        {verificationMessage && (
+          <div className="auth-form__api-success">{verificationMessage}</div>
+        )}
         {error && <div className="auth-form__api-error">{error}</div>}
+        {resendError && <div className="auth-form__api-error">{resendError}</div>}
+        {resendMessage && (
+          <div className="auth-form__api-success">{resendMessage}</div>
+        )}
         <AuthInput
           label="Email Address"
           type="email"
@@ -106,6 +159,17 @@ const Login = () => {
             <span>Keep me signed in</span>
           </label>
         </div>
+
+        {shouldShowResendAction && (
+          <button
+            className="auth-button auth-button--ghost"
+            type="button"
+            onClick={handleResendVerification}
+            disabled={resendLoading}
+          >
+            {resendLoading ? "Sending verification..." : "Resend verification email"}
+          </button>
+        )}
 
         <button className="auth-button" type="submit" disabled={loading}>
           {loading ? "Signing in..." : "Sign In"}

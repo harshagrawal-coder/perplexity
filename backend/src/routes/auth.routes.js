@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   register,
+  resendVerificationEmail,
   verifyEmail,
   login,
   getUser,
@@ -13,6 +14,7 @@ import { authLimiter, registerLimiter } from "../middleware/rateLimiter.js";
 const authRouter = Router();
 
 authRouter.post("/register", registerLimiter, validateRegisterUser, register);
+authRouter.post("/resend-verification-email", authLimiter, resendVerificationEmail);
 authRouter.get("/verify-email", verifyEmail);
 authRouter.post("/login", authLimiter, validateLoginUser, login);
 authRouter.post("/logout", authMiddleware, logout);

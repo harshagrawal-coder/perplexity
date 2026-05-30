@@ -29,6 +29,15 @@ export const authService = {
     }
   },
 
+  async resendVerificationEmail(email) {
+    try {
+      const response = await api.post("/resend-verification-email", { email });
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  },
+
   async getUser() {
     try {
       const response = await api.get("/get-user");

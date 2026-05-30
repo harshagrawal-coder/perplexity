@@ -17,8 +17,33 @@ oauth2Client.setCredentials({
 
 const gmailUser = process.env.GOOGLE_USER;
 
-async function createTransporter() {
+function createAppPasswordTransporter() {
+  if (!gmailUser || !process.env.GOOGLE_APP_PASSWORD) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: gmailUser,
+      pass: process.env.GOOGLE_APP_PASSWORD,
+    },
+  });
+}
+
+async function createOAuthTransporter() {
+  if (
+    !gmailUser ||
+    !process.env.GOOGLE_CLIENT_ID ||
+    !process.env.GOOGLE_CLIENT_SECRET ||
+    !process.env.GOOGLE_REFRESH_TOKEN
+  ) {
+    return null;
+  }
+
   const accessToken = await oauth2Client.getAccessToken();
+  const resolvedAccessToken =
+    typeof accessToken === "string" ? accessToken : accessToken?.token;
 
   return nodemailer.createTransport({
     service: "gmail",
@@ -28,9 +53,32 @@ async function createTransporter() {
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-      accessToken: accessToken.token,
+      accessToken: resolvedAccessToken,
     },
   });
+}
+
+async function createTransporter() {
+  const errors = [];
+
+  const appPasswordTransporter = createAppPasswordTransporter();
+  if (appPasswordTransporter) {
+    return appPasswordTransporter;
+  }
+
+  try {
+    const oauthTransporter = await createOAuthTransporter();
+    if (oauthTransporter) {
+      return oauthTransporter;
+    }
+  } catch (error) {
+    errors.push(error.message);
+  }
+
+  throw new Error(
+    errors[0] ||
+      "Email transporter is not configured. Provide Gmail app password or OAuth credentials.",
+  );
 }
 
 export async function sendMail({ to, subject, html, text }) {

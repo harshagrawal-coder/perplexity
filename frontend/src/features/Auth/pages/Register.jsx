@@ -60,8 +60,14 @@ const Register = () => {
     e.preventDefault();
     if (!validate()) return;
     try {
-      await register(formData);
-      navigate("/login");
+      const response = await register(formData);
+      navigate("/login", {
+        state: {
+          email: formData.email,
+          registrationMessage: response.message,
+          verificationEmailSent: response.verificationEmailSent,
+        },
+      });
     } catch {
       // error handled by redux
     }

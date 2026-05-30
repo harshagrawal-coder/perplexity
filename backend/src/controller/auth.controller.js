@@ -21,6 +21,29 @@ function getCookieMaxAge(expiresIn = "7d") {
   return value * unitMap[unit];
 }
 
+function getVerificationUrl(token) {
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const normalizedFrontendUrl = frontendUrl.replace(/\/+$/, "");
+
+  return `${normalizedFrontendUrl}/verify-email?token=${token}`;
+}
+
+function buildVerificationEmail(user, token) {
+  const verificationUrl = getVerificationUrl(token);
+
+  return {
+    to: user.email,
+    subject: "Welcome to Perplexity Clone",
+    text: `Hello ${user.username}, your account has been created successfully. Please verify your email: ${verificationUrl}`,
+    html: `
+      <h2>Hello ${user.username}</h2>
+      <p>Your account has been created successfully.</p>
+      <p>Please verify your email:</p>
+      <a href="${verificationUrl}">Verify Email</a>
+    `,
+  };
+}
+
 export async function register(req, res) {
   try {
     const { email, password, username } = req.body;
@@ -46,27 +69,11 @@ export async function register(req, res) {
     });
 
     const token = user.generateAuthToken();
+    let verificationEmailSent = false;
 
     try {
-      const mailInfo = await sendMail({
-        to: user.email,
-
-        subject: "Welcome to Perplexity Clone",
-
-        text: `Hello ${user.username}, your account has been created successfully. Please verify your email.`,
-
-        html: `
-    <h2>Hello ${user.username}</h2>
-
-    <p>Your account has been created successfully.</p>
-
-    <p>Please verify your email:</p>
-
-    <a href="${process.env.FRONTEND_URL || "http://localhost:5173"}/verify-email?token=${token}">
-      Verify Email
-    </a>
-  `,
-      });
+      const mailInfo = await sendMail(buildVerificationEmail(user, token));
+      verificationEmailSent = true;
 
       console.log({
         from: process.env.GOOGLE_USER,
@@ -77,7 +84,7 @@ export async function register(req, res) {
         messageId: mailInfo.messageId,
       });
     } catch (error) {
-      console.error("Failed to send welcome email:", error.message);
+      console.error("Failed to send verification email:", error.message);
     }
 
     // Auto-verify in development so users can log in immediately
@@ -87,8 +94,11 @@ export async function register(req, res) {
     }
 
     return res.status(201).json({
-      message: "User registered successfully",
+      message: verificationEmailSent
+        ? "User registered successfully. Please check your email to verify your account."
+        : "User registered successfully, but we could not send the verification email. Please resend it from the login page.",
       success: true,
+      verificationEmailSent,
       user: {
         id: user._id,
         username: user.username,
@@ -110,6 +120,50 @@ export async function register(req, res) {
 
     return res.status(500).json({
       message: "Internal server error",
+      success: false,
+    });
+  }
+}
+
+export async function resendVerificationEmail(req, res) {
+  try {
+    const email = req.body?.email?.toLowerCase()?.trim();
+
+    if (!email) {
+      return res.status(400).json({
+        message: "Email is required",
+        success: false,
+      });
+    }
+
+    const user = await usermodel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "No account found with this email",
+        success: false,
+      });
+    }
+
+    if (user.verified) {
+      return res.status(400).json({
+        message: "Email is already verified",
+        success: false,
+      });
+    }
+
+    const token = user.generateAuthToken();
+    await sendMail(buildVerificationEmail(user, token));
+
+    return res.status(200).json({
+      message: "Verification email sent successfully",
+      success: true,
+    });
+  } catch (error) {
+    console.error("Resend verification email error:", error.message);
+
+    return res.status(500).json({
+      message: "Unable to send verification email right now. Please try again later.",
       success: false,
     });
   }
