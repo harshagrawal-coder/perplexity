@@ -24,8 +24,8 @@ function createAppPasswordTransporter() {
 
   return nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
+    port: 465,
+    secure: true,
     family: 4,
     auth: {
       user: gmailUser,
@@ -50,20 +50,19 @@ async function createOAuthTransporter() {
   const resolvedAccessToken =
     typeof accessToken === "string" ? accessToken : accessToken?.token;
 
-  return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    family: 4,
-    auth: {
-      type: "OAuth2",
-      user: gmailUser,
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-      accessToken: resolvedAccessToken,
-    },
-  });
+return nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
+  auth: {
+    type: "OAuth2",
+    user: gmailUser,
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+    accessToken: resolvedAccessToken,
+  },
+});
 }
 
 async function createTransporter() {
